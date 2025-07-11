@@ -4,6 +4,7 @@
 	import { MESSAGE_TYPES } from '../../../types/types';
 	import { dev } from '$app/environment';
 	import Sender from '$lib/sender.svelte';
+	import Receiver from '$lib/receiver.svelte';
 
 	function createSocket(): WebSocket {
 		const sock = new WebSocket('ws://localhost:3000');
@@ -103,6 +104,8 @@
 			connection count: {connectionCount}
 		</p>
 		<button onclick={clearUser}>clear user session</button>
+    <hr />
 		<Sender socket={ws} {userId} />
+    <Receiver socket={ws} />
 	{/if}
 </section>

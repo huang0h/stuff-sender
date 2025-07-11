@@ -62,9 +62,15 @@ socketServer.on("connection", (socket, req) => {
     }
 
     // Otherwise, message is an uploaded artifact and data is required
-    if (body.type !== MESSAGE_TYPES.ITEM || body.data === undefined) {
+    if (body.type !== MESSAGE_TYPES.ITEM || body.payload === undefined) {
       // TODO: replace console.warns with actual error handling
       console.warn(`Received invalid message: `, body);
+      return;
+    }
+
+    const { name: itemName, type: itemType, data: itemData } = body.payload;
+    if (itemName === undefined || itemType === undefined || itemData === undefined) {
+      console.warn('Received item message with invalid fields');
       return;
     }
 
@@ -74,14 +80,21 @@ socketServer.on("connection", (socket, req) => {
       return;
     }
 
-    const messageBody = {
+    const forwardMessageBody = {
       userId: body.userId,
-      type: body.type,
-      data: body.type,
+      type: MESSAGE_TYPES.ITEM,
+      payload: {
+        name: itemName,
+        type: itemType,
+        data: itemData,
+      },
     };
+
+    console.info('Forwarding message:', forwardMessageBody);
+
     for (let sock of userConnections) {
       if (sock !== socket) {
-        sock.send(JSON.stringify(messageBody));
+        sock.send(JSON.stringify(forwardMessageBody));
       }
     }
   });

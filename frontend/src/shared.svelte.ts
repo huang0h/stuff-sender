@@ -1,9 +1,6 @@
-export const LOCAL_USER_KEY = 'userId';
+import type { ItemType } from "../../types/types";
 
-export enum ItemType {
-  TEXT = 'text',
-  FILE = 'file',
-}
+export const LOCAL_USER_KEY = 'userId';
 
 export interface CachedItem {
   name: string;
