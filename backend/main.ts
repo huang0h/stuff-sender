@@ -86,7 +86,7 @@ socketServer.on("connection", (socket, req) => {
     }
   });
 
-  socket.on("close", () => {
+  socket.on("close", (code, reason) => {
     const socketUser = socketLookup.get(socket);
     if (socketUser === undefined) {
       console.error(`ERROR: found socket with no user`);
@@ -100,7 +100,7 @@ socketServer.on("connection", (socket, req) => {
     }
 
     // Clean up connections: delete from both userId -> socket and socket -> userId maps
-    console.log(`Closing connection for ${socketUser}`);
+    console.log(`Closing connection for ${socketUser} | code: ${code} | reason: ${reason}`);
 
     const remainingConnections = userConnections.filter((s) => s !== socket);
     if (remainingConnections.length === 0) {

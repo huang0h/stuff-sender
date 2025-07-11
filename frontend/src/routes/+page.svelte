@@ -7,44 +7,59 @@
 
 	function createSocket(): WebSocket {
 		const sock = new WebSocket('ws://localhost:3000');
-		if (dev) {
-      // Override socket's send method for logging when in dev
-			const originalSend = sock.send;
-			sock.send = (data) => {
-				console.info('Sending message:', data);
-				originalSend.call(sock, data);
-			};
-		}
 
-    return sock;
+		sock.addEventListener('open', () => {
+			if (dev) {
+				// Override socket's send method for logging when in dev
+				const originalSend = sock.send;
+				sock.send = (data) => {
+					console.info('Sending message:', data);
+					originalSend.call(sock, data);
+				};
+			}
+
+			sock.addEventListener('message', (event) => {
+				const data = JSON.parse(event.data);
+				console.info('Received message:', data);
+				console.log(`userId: ${userId}`);
+
+				if (data.type === MESSAGE_TYPES.PING && userId !== null) {
+					connectToServer();
+					return;
+				}
+
+				if (data.type == MESSAGE_TYPES.COUNT) {
+					connectionCount = data.count;
+				}
+			});
+		});
+
+		return sock;
 	}
 
-	const ws: WebSocket = $state(createSocket());
+	let ws: WebSocket | null = $state(null);
 
 	let userId = $state<string | null>(null);
 	let connectionCount = $state(0);
 	let idInput = $state('');
 
 	onMount(() => {
+		console.log('mounting');
 		userId = localStorage.getItem(LOCAL_USER_KEY);
-		ws.addEventListener('message', (event) => {
-			const data = JSON.parse(event.data);
-			console.info('Received message:', data);
 
-			if (data.type === MESSAGE_TYPES.PING && userId !== null) {
-				connectToServer();
-				return;
-			}
-
-			if (data.type == MESSAGE_TYPES.COUNT) {
-				connectionCount = data.count;
-			}
-		});
+		if (userId !== null) {
+			ws = createSocket();
+		}
 	});
 
 	function connectToServer() {
 		if (userId === null) {
 			console.error('Attempted to connect to server without a user ID');
+			return;
+		}
+
+		if (ws === null) {
+			console.error('Attempted to connect to server, but socket is not initialized');
 			return;
 		}
 
@@ -59,12 +74,25 @@
 		userId = idInput;
 		localStorage.setItem(LOCAL_USER_KEY, idInput);
 
+		ws = createSocket();
 		connectToServer();
+	}
+
+	function clearUser() {
+		console.info('clearing session...');
+		userId = null;
+		localStorage.removeItem(LOCAL_USER_KEY);
+
+		if (ws !== null) {
+			ws.close(1000, 'User manually cleared session');
+		}
+
+		ws = createSocket();
 	}
 </script>
 
 <section>
-	{#if userId === null}
+	{#if userId === null || ws === null}
 		<div class="id-form">
 			gimme a pound
 			<input bind:value={idInput} />
@@ -74,6 +102,7 @@
 		<p>
 			connection count: {connectionCount}
 		</p>
+		<button onclick={clearUser}>clear user session</button>
 		<Sender socket={ws} {userId} />
 	{/if}
 </section>
