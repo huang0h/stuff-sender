@@ -1,7 +1,7 @@
 import express from "express";
 import WebSocket, { WebSocketServer } from "ws";
 import http from "http";
-import { MESSAGE_TYPES } from "../types/types";
+import { ItemMessage, MessageTypes } from "../types/types";
 
 const app = express();
 const port = 3000;
@@ -14,7 +14,7 @@ const socketLookup: Map<WebSocket, string> = new Map();
 const socketServer = new WebSocketServer({ server });
 
 function sendCountMessage(socket: WebSocket, count: number) {
-  socket.send(JSON.stringify({ type: MESSAGE_TYPES.COUNT, count }));
+  socket.send(JSON.stringify({ type: MessageTypes.COUNT, count }));
 }
 
 function handlePong(socket, data) {
@@ -41,7 +41,7 @@ socketServer.on("connection", (socket, req) => {
 
   socket.send(
     JSON.stringify({
-      type: MESSAGE_TYPES.PING,
+      type: MessageTypes.PING,
     })
   );
 
@@ -56,13 +56,13 @@ socketServer.on("connection", (socket, req) => {
     }
 
     // Pong message means client wants to connect to server
-    if (body.type === MESSAGE_TYPES.PONG) {
+    if (body.type === MessageTypes.PONG) {
       handlePong(socket, body);
       return;
     }
 
     // Otherwise, message is an uploaded artifact and data is required
-    if (body.type !== MESSAGE_TYPES.ITEM || body.payload === undefined) {
+    if (body.type !== MessageTypes.ITEM || body.payload === undefined) {
       // TODO: replace console.warns with actual error handling
       console.warn(`Received invalid message: `, body);
       return;
@@ -80,9 +80,9 @@ socketServer.on("connection", (socket, req) => {
       return;
     }
 
-    const forwardMessageBody = {
+    const forwardMessageBody: ItemMessage = {
       userId: body.userId,
-      type: MESSAGE_TYPES.ITEM,
+      type: MessageTypes.ITEM,
       payload: {
         name: itemName,
         type: itemType,
@@ -90,7 +90,7 @@ socketServer.on("connection", (socket, req) => {
       },
     };
 
-    console.info('Forwarding message:', forwardMessageBody);
+    // console.info('Forwarding message:', forwardMessageBody);
 
     for (let sock of userConnections) {
       if (sock !== socket) {

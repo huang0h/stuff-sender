@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { LOCAL_USER_KEY } from '../shared.svelte';
-	import { MESSAGE_TYPES } from '../../../types/types';
+	import { MessageTypes } from '../../../types/types';
 	import { dev } from '$app/environment';
 	import Sender from '$lib/sender.svelte';
 	import Receiver from '$lib/receiver.svelte';
@@ -21,15 +21,13 @@
 
 			sock.addEventListener('message', (event) => {
 				const data = JSON.parse(event.data);
-				console.info('Received message:', data);
-				console.log(`userId: ${userId}`);
 
-				if (data.type === MESSAGE_TYPES.PING && userId !== null) {
+				if (data.type === MessageTypes.PING && userId !== null) {
 					connectToServer();
 					return;
 				}
 
-				if (data.type == MESSAGE_TYPES.COUNT) {
+				if (data.type == MessageTypes.COUNT) {
 					connectionCount = data.count;
 				}
 			});
@@ -64,7 +62,7 @@
 			return;
 		}
 
-		ws.send(JSON.stringify({ type: MESSAGE_TYPES.PONG, userId }));
+		ws.send(JSON.stringify({ type: MessageTypes.PONG, userId }));
 	}
 
 	function updateUserId() {
@@ -104,8 +102,8 @@
 			connection count: {connectionCount}
 		</p>
 		<button onclick={clearUser}>clear user session</button>
-    <hr />
+		<hr />
 		<Sender socket={ws} {userId} />
-    <Receiver socket={ws} />
+		<Receiver socket={ws} />
 	{/if}
 </section>

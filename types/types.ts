@@ -1,4 +1,4 @@
-export enum MESSAGE_TYPES {
+export enum MessageTypes {
   PING = "ping",
   PONG = "pong",
   COUNT = "count",
@@ -10,12 +10,18 @@ export enum ItemType {
   FILE = 'file',
 }
 
-interface DataMessageFields<D extends ItemType, V> {
+interface ItemMessagePayloadFields<D extends ItemType, V> {
   name: string;
   type: D;
   data: V;
 }
 
-export type TextMessage = DataMessageFields<ItemType.TEXT, string>;
-export type FileMessage = DataMessageFields<ItemType.FILE, Base64URLString>;
-export type DataMessage = TextMessage | FileMessage;
+export type TextMessagePayload = ItemMessagePayloadFields<ItemType.TEXT, string>;
+export type FileMessagePayload = ItemMessagePayloadFields<ItemType.FILE, Base64URLString[]>;
+export type ItemMessagePayload = TextMessagePayload | FileMessagePayload;
+
+export interface ItemMessage {
+  userId: string;
+  type: MessageTypes.ITEM;
+  payload: ItemMessagePayload;
+}

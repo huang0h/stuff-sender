@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { cachedItems, type CachedItem } from '../shared.svelte';
-	import { ItemType, MESSAGE_TYPES, type DataMessage } from '../../../types/types';
+	import { ItemType, MessageTypes } from '../../../types/types';
 
 	interface SenderProps {
 		socket: WebSocket;
@@ -15,35 +14,38 @@
 	let itemTextValue = $state('');
 	let itemFileValue: FileList | null = $state(null);
 
-  $effect(() => {
-    console.log(itemFileValue, typeof itemFileValue);
-  })
-
-	function itemFileToB64() {
-		if (itemFileValue === null || itemFileValue[0] === null) {
+	function itemFileToB64(file: File | null) {
+		if (file === null) {
 			return '';
 		}
 
-		const file = itemFileValue[0];
-
 		return new Promise<string>((resolve, reject) => {
 			const reader = new FileReader();
-      reader.readAsDataURL(file);
+			reader.readAsDataURL(file);
 			reader.onload = () => resolve(reader.result as string);
 			reader.onerror = reject;
 		});
 	}
 
 	async function sendItem() {
-		const data = itemType === ItemType.TEXT ? itemTextValue : await itemFileToB64();
-		if (data === '') {
+		let data;
+		if (itemType === ItemType.TEXT) {
+			data = itemTextValue;
+		} else if (itemType === ItemType.FILE && itemFileValue !== null) {
+			data = await Promise.all(Array.from(itemFileValue).map((f) => itemFileToB64(f)));
+		} else {
+			data = '';
+		}
+
+		// This is kind of cursed since strings and arrays share the `length` property
+		if (data.length === 0) {
 			alert('Cannot send an empty item');
 			return;
 		}
 
 		const itemMessage = {
 			userId,
-			type: MESSAGE_TYPES.ITEM,
+			type: MessageTypes.ITEM,
 			payload: {
 				name: itemName,
 				type: itemType,
@@ -82,7 +84,7 @@
 		<input id="item-text-value" type="text" bind:value={itemTextValue} />
 	{:else if itemType === ItemType.FILE}
 		<label for="item-fileItemType">File:</label>
-		<input id="item-file-value" type="file" bind:files={itemFileValue} />
+		<input id="item-file-value" type="file" multiple bind:files={itemFileValue} />
 	{/if}
 	<button onclick={sendItem}>Send</button>
 </div>
