@@ -17,7 +17,7 @@ interface ItemMessagePayloadFields<D extends ItemType, V> {
 }
 
 export type TextMessagePayload = ItemMessagePayloadFields<ItemType.TEXT, string>;
-export type FileMessagePayload = ItemMessagePayloadFields<ItemType.FILE, Base64URLString[]>;
+export type FileMessagePayload = ItemMessagePayloadFields<ItemType.FILE, { filename: string; b64data: Base64URLString }[]>;
 export type ItemMessagePayload = TextMessagePayload | FileMessagePayload;
 
 export interface ItemMessage {

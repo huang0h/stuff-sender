@@ -14,15 +14,11 @@
 	let itemTextValue = $state('');
 	let itemFileValue: FileList | null = $state(null);
 
-	function itemFileToB64(file: File | null) {
-		if (file === null) {
-			return '';
-		}
-
-		return new Promise<string>((resolve, reject) => {
+	function itemFileToB64(file: File) {
+		return new Promise<[string, string]>((resolve, reject) => {
 			const reader = new FileReader();
 			reader.readAsDataURL(file);
-			reader.onload = () => resolve(reader.result as string);
+			reader.onload = () => resolve([file.name, reader.result as string]);
 			reader.onerror = reject;
 		});
 	}
@@ -32,7 +28,8 @@
 		if (itemType === ItemType.TEXT) {
 			data = itemTextValue;
 		} else if (itemType === ItemType.FILE && itemFileValue !== null) {
-			data = await Promise.all(Array.from(itemFileValue).map((f) => itemFileToB64(f)));
+			const b64Files = await Promise.all(Array.from(itemFileValue).map((f) => itemFileToB64(f)));
+      data = b64Files.map(([filename, b64data]) => ({ filename, b64data }))
 		} else {
 			data = '';
 		}
@@ -54,6 +51,11 @@
 		};
 
 		socket.send(JSON.stringify(itemMessage));
+    
+    // Reset fields
+    itemName = '';
+    itemTextValue = '';
+    itemFileValue = null;
 	}
 </script>
 

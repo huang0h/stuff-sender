@@ -5,7 +5,7 @@
  consider: https://stackoverflow.com/questions/79296004/bind-to-imported-state-in-svelte5-error-constant-binding
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import {
 		ItemType,
 		MessageTypes,
@@ -13,15 +13,77 @@
 		type ItemMessagePayload
 	} from '../../../types/types';
 	import { dev } from '$app/environment';
-	import { LOCAL_USER_KEY } from '../shared.svelte';
+	import { LOCAL_USER_KEY, type ProcessedItem } from '../shared.svelte';
 
 	interface ReceiverProps {
 		socket: WebSocket;
 	}
 
+	function b64FileLink(b64string: Base64URLString) {
+		// split data into [data:mimetype;, b64data]
+		const [header, fileData] = b64string.split('base64,');
+		const mimeType = header.slice(5, -1);
+		const fileBytes = atob(fileData);
+		const byteArray = new Uint8Array(fileBytes.length);
+
+		for (let i = 0; i < fileBytes.length; i++) {
+			byteArray[i] = fileBytes.charCodeAt(i);
+		}
+
+		const fileBlob = new Blob([byteArray], { type: mimeType });
+
+		return URL.createObjectURL(fileBlob);
+	}
+
 	const { socket }: ReceiverProps = $props();
 	let userId: string | null = $state(null);
-	let receivedItems: ItemMessagePayload[] = $state([]);
+	let receivedItems: ProcessedItem[] = $state([]);
+
+	function receiveItem(event: MessageEvent<any>) {
+		const messageData = JSON.parse(event.data);
+
+		if (dev) {
+			console.info('Received message:', messageData);
+		}
+
+		// Only listen for item messages
+		if (messageData.type !== MessageTypes.ITEM) {
+			return;
+		}
+
+		// Reject any items meant for someone else
+		// (this probably shouldn't happen, but better to be safe)
+		if (messageData.userId !== userId) {
+			console.warn('Received invalid message');
+			return;
+		}
+
+		const itemPayload: ItemMessagePayload = messageData.payload;
+		if (
+			itemPayload === undefined ||
+			itemPayload.name === undefined ||
+			!Object.values(ItemType).includes(itemPayload.type) ||
+			itemPayload.data === undefined
+		) {
+			console.warn('Received invalid item payload');
+			return;
+		}
+
+		let processedItem: ProcessedItem;
+
+		if (itemPayload.type === ItemType.TEXT) {
+			processedItem = { ...itemPayload };
+		} else {
+      // Process files by converting them into download links on reception so we only do this once
+			const processedFiles = itemPayload.data.map(({ filename, b64data }) => ({
+				filename,
+				downloadLink: b64FileLink(b64data)
+			}));
+			processedItem = { ...itemPayload, data: processedFiles };
+		}
+
+		receivedItems.push(processedItem);
+	}
 
 	onMount(() => {
 		// Also check user IDs on received messages as an extra layer of precaution
@@ -31,38 +93,11 @@
 			return;
 		}
 
-		socket.addEventListener('message', (event) => {
-			const messageData = JSON.parse(event.data);
+		socket.addEventListener('message', receiveItem);
+	});
 
-			if (dev) {
-				console.info('Received message:', messageData);
-			}
-
-			// Only listen for item messages
-			if (messageData.type !== MessageTypes.ITEM) {
-				return;
-			}
-
-			// Reject any items meant for someone else
-			// (this probably shouldn't happen, but better to be safe)
-			if (messageData.userId !== userId) {
-				console.warn('Received invalid message');
-				return;
-			}
-
-			const item: ItemMessagePayload = messageData.payload;
-			if (
-				item === undefined ||
-				item.name === undefined ||
-				!Object.values(ItemType).includes(item.type) ||
-				item.data === undefined
-			) {
-				console.warn('Received invalid item payload');
-				return;
-			}
-
-			receivedItems.push(item);
-		});
+	onDestroy(() => {
+		socket.removeEventListener('message', receiveItem);
 	});
 </script>
 
@@ -71,7 +106,10 @@
 	{#if item.type === ItemType.TEXT}
 		{item.data}
 	{:else}
-		{item.data.length} files
+		{#each item.data as file}
+			<!-- name this something better please -->
+			<a href={file.downloadLink} download={file.filename}>download</a>
+		{/each}
 	{/if}
 	<hr />
 {/each}
