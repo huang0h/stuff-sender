@@ -7,7 +7,7 @@
 	import Receiver from '$lib/receiver.svelte';
 
 	function createSocket(): WebSocket {
-		const sock = new WebSocket('ws://localhost:3000');
+		const sock = new WebSocket(import.meta.env.VITE_SOCKET_SERVER || 'ws://localhost:4000');
 		connectionStatus = ConnectionStatus.CONNECTING;
 
 		sock.addEventListener('open', () => {
