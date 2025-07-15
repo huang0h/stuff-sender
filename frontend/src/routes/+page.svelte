@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { LOCAL_USER_KEY } from '../shared.svelte';
+	import { ConnectionStatus, LOCAL_USER_KEY } from '../shared.svelte';
 	import { MessageTypes } from '../../../types/types';
 	import { dev } from '$app/environment';
 	import Sender from '$lib/sender.svelte';
@@ -8,6 +8,7 @@
 
 	function createSocket(): WebSocket {
 		const sock = new WebSocket('ws://localhost:3000');
+		connectionStatus = ConnectionStatus.CONNECTING;
 
 		sock.addEventListener('open', () => {
 			if (dev) {
@@ -29,6 +30,7 @@
 
 				if (data.type == MessageTypes.COUNT) {
 					connectionCount = data.count;
+					connectionStatus = ConnectionStatus.CONNECTED;
 				}
 			});
 		});
@@ -36,18 +38,18 @@
 		return sock;
 	}
 
-	let ws: WebSocket | null = $state(null);
+	let socket: WebSocket | null = $state(null);
+	let connectionStatus: ConnectionStatus = $state(ConnectionStatus.DISCONNECTED);
 
 	let userId = $state<string | null>(null);
 	let connectionCount = $state(0);
 	let idInput = $state('');
 
 	onMount(() => {
-		console.log('mounting');
 		userId = localStorage.getItem(LOCAL_USER_KEY);
 
 		if (userId !== null) {
-			ws = createSocket();
+			socket = createSocket();
 		}
 	});
 
@@ -57,23 +59,24 @@
 			return;
 		}
 
-		if (ws === null) {
+		if (socket === null) {
 			console.error('Attempted to connect to server, but socket is not initialized');
 			return;
 		}
 
-		ws.send(JSON.stringify({ type: MessageTypes.PONG, userId }));
+		socket.send(JSON.stringify({ type: MessageTypes.PONG, userId }));
 	}
 
 	function updateUserId() {
 		if (idInput.length < 3) {
 			alert('Given ID is too short (must be at least 3 characters long');
+			return;
 		}
 
 		userId = idInput;
 		localStorage.setItem(LOCAL_USER_KEY, idInput);
 
-		ws = createSocket();
+		socket = createSocket();
 		connectToServer();
 	}
 
@@ -81,29 +84,103 @@
 		console.info('clearing session...');
 		userId = null;
 		localStorage.removeItem(LOCAL_USER_KEY);
+		connectionStatus = ConnectionStatus.DISCONNECTED;
 
-		if (ws !== null) {
-			ws.close(1000, 'User manually cleared session');
+		if (socket !== null) {
+			socket.close(1000, 'User manually disconnected');
 		}
 
-		ws = createSocket();
+		socket = createSocket();
 	}
 </script>
 
-<section>
-	{#if userId === null || ws === null}
+<main>
+	{#if connectionStatus === ConnectionStatus.DISCONNECTED || userId === null || socket === null}
 		<div class="id-form">
-			gimme a pound
+			Connect with a unique user ID:
+			<br /><br />
 			<input bind:value={idInput} />
 			<button onclick={updateUserId}>Submit</button>
 		</div>
+	{:else if connectionStatus === ConnectionStatus.CONNECTING}
+		connecting...
+	{:else if connectionStatus === ConnectionStatus.CONNECTED}
+		<section>
+			<div class="status">
+				<p>
+					Connected to {connectionCount} other device{connectionCount === 1 ? '' : 's'}
+				</p>
+				<br />
+				<button onclick={clearUser}>Disconnect</button>
+			</div>
+			{#if connectionCount <= 1}
+				<div class="warning">
+					No other connections detected :(
+					<br />
+					Connect with the same user ID on another device to send content!
+					<br />
+				</div>
+			{:else}
+				<!-- <div class="content"> -->
+				<Sender {socket} {userId} />
+				<Receiver {socket} />
+				<!-- </div> -->
+			{/if}
+		</section>
 	{:else}
-		<p>
-			connection count: {connectionCount}
-		</p>
-		<button onclick={clearUser}>clear user session</button>
-		<hr />
-		<Sender socket={ws} {userId} />
-		<Receiver socket={ws} />
+		<div class="warning">
+			Looks like something went wrong with setting up a connection - try refreshing the page?
+		</div>
 	{/if}
-</section>
+</main>
+
+<style>
+	:global(*) {
+		margin: 0;
+		/* padding: 0; */
+		box-sizing: border-box;
+	}
+	:global(body) {
+		background-color: #202020;
+
+		font-family: Arial, Helvetica, sans-serif;
+		color: white;
+		text-align: center;
+	}
+
+	main {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+
+		padding-top: 20px;
+	}
+
+	.warning {
+		display: flex;
+		align-items: center;
+
+		padding: 15px;
+		height: 55px;
+
+		background-color: #ee222299;
+		border-radius: 5px;
+	}
+
+	section {
+		display: flex;
+		flex-direction: row;
+		gap: 45px;
+	}
+
+	.status {
+		padding: 20px 40px;
+		width: 200px;
+		height: 120px;
+
+		border: 2px solid blue;
+		border-radius: 5px;
+		box-shadow: 0 0 15px blue;
+	}
+</style>

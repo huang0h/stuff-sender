@@ -6,14 +6,10 @@
 -->
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
-	import {
-		ItemType,
-		MessageTypes,
-		type ItemMessage,
-		type ItemMessagePayload
-	} from '../../../types/types';
+	import { ItemType, MessageTypes, type ItemMessagePayload } from '../../../types/types';
 	import { dev } from '$app/environment';
 	import { LOCAL_USER_KEY, type ProcessedItem } from '../shared.svelte';
+	import ReceivedItem from './receivedItem.svelte';
 
 	interface ReceiverProps {
 		socket: WebSocket;
@@ -39,6 +35,7 @@
 	let userId: string | null = $state(null);
 	let receivedItems: ProcessedItem[] = $state([]);
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function receiveItem(event: MessageEvent<any>) {
 		const messageData = JSON.parse(event.data);
 
@@ -74,12 +71,16 @@
 		if (itemPayload.type === ItemType.TEXT) {
 			processedItem = { ...itemPayload };
 		} else {
-      // Process files by converting them into download links on reception so we only do this once
+			// Process files by converting them into download links on reception so we only do this once
 			const processedFiles = itemPayload.data.map(({ filename, b64data }) => ({
 				filename,
 				downloadLink: b64FileLink(b64data)
 			}));
 			processedItem = { ...itemPayload, data: processedFiles };
+		}
+
+		if (processedItem.name === '') {
+			processedItem.name = '<unnamed item>';
 		}
 
 		receivedItems.push(processedItem);
@@ -101,15 +102,31 @@
 	});
 </script>
 
-{#each receivedItems as item}
-	<h4>item {item.name}</h4>
-	{#if item.type === ItemType.TEXT}
-		{item.data}
-	{:else}
-		{#each item.data as file}
-			<!-- name this something better please -->
-			<a href={file.downloadLink} download={file.filename}>download</a>
-		{/each}
-	{/if}
+<div id="received-content">
+	Received content:
 	<hr />
-{/each}
+
+	{#if receivedItems.length > 0}
+		{#each receivedItems as item, i (i)}
+			<ReceivedItem {item} />
+			<hr />
+		{/each}
+	{:else}
+		<p>nothing received yet ¯\_(ツ)_/¯</p>
+	{/if}
+</div>
+
+<style>
+	#received-content {
+		padding: 15px;
+		width: 500px;
+
+		border: 2px solid white;
+		border-radius: 5px;
+		box-shadow: 0 0 10px white;
+	}
+
+	hr {
+		margin: 10px 0;
+	}
+</style>
