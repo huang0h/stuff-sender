@@ -1,0 +1,64 @@
+name: Build and deploy site
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: ['master']
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: 22.12.0 # current LTS version
+          cache: yarn
+
+      - name: Install dependencies
+        run: cd frontend && yarn
+
+      - name: Set up pages
+        uses: actions/configure-pages@v5.0.0
+        with:
+          static_site_generator: sveltekit
+
+      - name: Build site
+        run: cd frontend && yarn build
+
+      - name: Upload artifacts
+        uses: actions/upload-pages-artifact@v3.0.1
+        with:
+          path: 'frontend/build/'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4.0.5
