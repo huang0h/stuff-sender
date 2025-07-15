@@ -132,6 +132,10 @@ socketServer.on("connection", (socket, req) => {
   });
 });
 
+app.get('/', (req, res) => {
+  res.status(200).send('Socket server up and running!');
+})
+
 server.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
