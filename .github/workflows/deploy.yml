@@ -19,9 +19,6 @@ concurrency:
   group: 'pages'
   cancel-in-progress: false
 
-env:
-  VITE_SOCKET_SERVER: ${{ vars.SOCKET_SERVER }}
-
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -31,6 +28,12 @@ jobs:
     defaults:
       run:
         working-directory: ./frontend
+
+    environment:
+      name: frontend
+      
+    env:
+      VITE_SOCKET_SERVER: ${{ vars.SOCKET_SERVER }}
 
     steps:
       - name: Checkout
@@ -45,6 +48,7 @@ jobs:
 
       - name: Use env variables
         run: |
+          echo "Using:"
           echo "VITE_SOCKET_SERVER: $VITE_SOCKET_SERVER"
 
       - name: Install dependencies
