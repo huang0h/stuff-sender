@@ -5,128 +5,131 @@
  consider: https://stackoverflow.com/questions/79296004/bind-to-imported-state-in-svelte5-error-constant-binding
 -->
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
-	import { ItemType, MessageTypes, type ItemMessagePayload } from '../../../types/types';
-	import { dev } from '$app/environment';
-	import { LOCAL_USER_KEY, type ProcessedItem } from '../shared.svelte';
-	import ReceivedItem from './receivedItem.svelte';
+  import { onDestroy, onMount } from 'svelte';
+  import { ItemType, MessageTypes, type ItemMessagePayload } from '../../../types/types';
+  import { dev } from '$app/environment';
+  import { LOCAL_USER_KEY, type ProcessedItem } from '../shared.svelte';
+  import ReceivedItem from './receivedItem.svelte';
 
-	interface ReceiverProps {
-		socket: WebSocket;
-	}
+  interface ReceiverProps {
+    socket: WebSocket;
+  }
 
-	function b64FileLink(b64string: Base64URLString) {
-		// split data into [data:mimetype;, b64data]
-		const [header, fileData] = b64string.split('base64,');
-		const mimeType = header.slice(5, -1);
-		const fileBytes = atob(fileData);
-		const byteArray = new Uint8Array(fileBytes.length);
+  function b64FileLink(b64string: Base64URLString) {
+    // split data into [data:mimetype;, b64data]
+    const [header, fileData] = b64string.split('base64,');
+    const mimeType = header.slice(5, -1);
+    const fileBytes = atob(fileData);
+    const byteArray = new Uint8Array(fileBytes.length);
 
-		for (let i = 0; i < fileBytes.length; i++) {
-			byteArray[i] = fileBytes.charCodeAt(i);
-		}
+    for (let i = 0; i < fileBytes.length; i++) {
+      byteArray[i] = fileBytes.charCodeAt(i);
+    }
 
-		const fileBlob = new Blob([byteArray], { type: mimeType });
+    const fileBlob = new Blob([byteArray], { type: mimeType });
 
-		return URL.createObjectURL(fileBlob);
-	}
+    return URL.createObjectURL(fileBlob);
+  }
 
-	const { socket }: ReceiverProps = $props();
-	let userId: string | null = $state(null);
-	let receivedItems: ProcessedItem[] = $state([]);
+  const { socket }: ReceiverProps = $props();
+  let userId: string | null = $state(null);
+  let receivedItems: ProcessedItem[] = $state([]);
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	function receiveItem(event: MessageEvent<any>) {
-		const messageData = JSON.parse(event.data);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function receiveItem(event: MessageEvent<any>) {
+    const messageData = JSON.parse(event.data);
 
-		if (dev) {
-			console.info('Received message:', messageData);
-		}
+    if (dev) {
+      console.info('Received message:', messageData);
+    }
 
-		// Only listen for item messages
-		if (messageData.type !== MessageTypes.ITEM) {
-			return;
-		}
+    // Only listen for item messages
+    if (messageData.type !== MessageTypes.ITEM) {
+      return;
+    }
 
-		// Reject any items meant for someone else
-		// (this probably shouldn't happen, but better to be safe)
-		if (messageData.userId !== userId) {
-			console.warn('Received invalid message');
-			return;
-		}
+    // Reject any items meant for someone else
+    // (this probably shouldn't happen, but better to be safe)
+    if (messageData.userId !== userId) {
+      console.warn('Received invalid message');
+      return;
+    }
 
-		const itemPayload: ItemMessagePayload = messageData.payload;
-		if (
-			itemPayload === undefined ||
-			itemPayload.name === undefined ||
-			!Object.values(ItemType).includes(itemPayload.type) ||
-			itemPayload.data === undefined
-		) {
-			console.warn('Received invalid item payload');
-			return;
-		}
+    const itemPayload: ItemMessagePayload = messageData.payload;
+    if (
+      itemPayload === undefined ||
+      itemPayload.name === undefined ||
+      !Object.values(ItemType).includes(itemPayload.type) ||
+      itemPayload.data === undefined
+    ) {
+      console.warn('Received invalid item payload');
+      return;
+    }
 
-		let processedItem: ProcessedItem;
+    let processedItem: ProcessedItem;
 
-		if (itemPayload.type === ItemType.TEXT) {
-			processedItem = { ...itemPayload };
-		} else {
-			// Process files by converting them into download links on reception so we only do this once
-			const processedFiles = itemPayload.data.map(({ filename, b64data }) => ({
-				filename,
-				downloadLink: b64FileLink(b64data)
-			}));
-			processedItem = { ...itemPayload, data: processedFiles };
-		}
+    if (itemPayload.type === ItemType.TEXT) {
+      processedItem = { ...itemPayload };
+    } else {
+      // Process files by converting them into download links on reception so we only do this once
+      const processedFiles = itemPayload.data.map(({ filename, b64data }) => ({
+        filename,
+        downloadLink: b64FileLink(b64data),
+      }));
+      processedItem = { ...itemPayload, data: processedFiles };
+    }
 
-		if (processedItem.name === '') {
-			processedItem.name = '<unnamed item>';
-		}
+    if (processedItem.name === '') {
+      processedItem.name = '<unnamed item>';
+    }
 
-		receivedItems.push(processedItem);
-	}
+    receivedItems.push(processedItem);
+  }
 
-	onMount(() => {
-		// Also check user IDs on received messages as an extra layer of precaution
-		userId = localStorage.getItem(LOCAL_USER_KEY);
-		if (userId === null) {
-			alert('No user ID set: unable to receive items');
-			return;
-		}
+  onMount(() => {
+    // Also check user IDs on received messages as an extra layer of precaution
+    userId = localStorage.getItem(LOCAL_USER_KEY);
+    if (userId === null) {
+      alert('No user ID set: unable to receive items');
+      return;
+    }
 
-		socket.addEventListener('message', receiveItem);
-	});
+    socket.addEventListener('message', receiveItem);
+  });
 
-	onDestroy(() => {
-		socket.removeEventListener('message', receiveItem);
-	});
+  onDestroy(() => {
+    socket.removeEventListener('message', receiveItem);
+  });
 </script>
 
 <div id="received-content">
-	Received content:
-	<hr />
+  Received content:
+  <hr />
 
-	{#if receivedItems.length > 0}
-		{#each receivedItems as item, i (i)}
-			<ReceivedItem {item} />
-			<hr />
-		{/each}
-	{:else}
-		<p>nothing received yet ¯\_(ツ)_/¯</p>
-	{/if}
+  {#if receivedItems.length > 0}
+    {#each receivedItems as item, i (i)}
+      <ReceivedItem {item} />
+      <hr />
+    {/each}
+  {:else}
+    <p>nothing received yet ¯\_(ツ)_/¯</p>
+  {/if}
 </div>
 
 <style>
-	#received-content {
-		padding: 15px;
-		width: 500px;
+  #received-content {
+    padding: 15px;
+    width: 400px;
 
-		border: 2px solid white;
-		border-radius: 5px;
-		box-shadow: 0 0 10px white;
-	}
+    border: 2px solid white;
+    border-radius: 5px;
+    box-shadow: 0 0 10px white;
 
-	hr {
-		margin: 10px 0;
-	}
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  hr {
+    margin: 10px 0;
+  }
 </style>
