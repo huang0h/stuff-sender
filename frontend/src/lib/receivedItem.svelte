@@ -4,11 +4,11 @@
   import Copy from '$lib/assets/copy.png';
   import Download from '$lib/assets/download.png';
 
-  interface ReceivedItem {
+  interface Props {
     item: ProcessedItem;
   }
 
-  let { item }: ReceivedItem = $props();
+  let { item }: Props = $props();
   let open = $state(false);
 </script>
 
@@ -90,6 +90,8 @@
 
   .file-content > ul > li {
     margin-bottom: 10px;
+
+    word-wrap: break-word;
   }
 
   button.download {

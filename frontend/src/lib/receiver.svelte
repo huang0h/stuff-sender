@@ -10,8 +10,9 @@
   import { dev } from '$app/environment';
   import { LOCAL_USER_KEY, type ProcessedItem } from '../shared.svelte';
   import ReceivedItem from './receivedItem.svelte';
+  import MinimizeButton from './minimizeButton.svelte';
 
-  interface ReceiverProps {
+  interface Props {
     socket: WebSocket;
   }
 
@@ -31,9 +32,10 @@
     return URL.createObjectURL(fileBlob);
   }
 
-  const { socket }: ReceiverProps = $props();
+  const { socket }: Props = $props();
   let userId: string | null = $state(null);
   let receivedItems: ProcessedItem[] = $state([]);
+  let isOpen = $state(true);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function receiveItem(event: MessageEvent<any>) {
@@ -102,21 +104,39 @@
   });
 </script>
 
-<div id="received-content">
-  Received content:
-  <hr />
+<div id="received-content" class={isOpen ? 'open' : 'closed'}>
+  <header>
+    <MinimizeButton bind:open={isOpen} />
+    <p>Received content:</p>
+  </header>
 
-  {#if receivedItems.length > 0}
-    {#each receivedItems as item, i (i)}
-      <ReceivedItem {item} />
-      <hr />
-    {/each}
-  {:else}
-    <p>nothing received yet ¯\_(ツ)_/¯</p>
+  {#if isOpen}
+    <hr />
+    {#if receivedItems.length > 0}
+      {#each receivedItems as item, i (i)}
+        <ReceivedItem {item} />
+        <hr />
+      {/each}
+    {:else}
+      <p>nothing received yet ¯\_(ツ)_/¯</p>
+    {/if}
   {/if}
 </div>
 
 <style>
+  header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 10px;
+  }
+
+  header > p {
+    position: absolute;
+  }
+
   #received-content {
     padding: 15px;
     width: 400px;
@@ -127,6 +147,21 @@
 
     grid-column: 2;
     grid-row: 1;
+  }
+
+  #received-content.open {
+    min-height: 200px;
+  }
+
+  #received-content.closed {
+    height: 60px;
+  }
+
+  @media (max-width: 400px) {
+    #received-content {
+      padding: 15px 10px;
+      width: 280px;
+    }
   }
 
   hr {

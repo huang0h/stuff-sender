@@ -151,6 +151,13 @@
     overflow: scroll;
   }
 
+  @media (orientation: portrait) {
+    :global(body) {
+      margin-top: 20px;
+      margin-bottom: 50px;
+    }
+  }
+
   main {
     display: flex;
     flex-direction: column;

@@ -25,3 +25,5 @@ export interface ItemMessage {
   type: MessageTypes.ITEM;
   payload: ItemMessagePayload;
 }
+
+export const MAX_FILE_SIZE_BYTES = 32 * 1024 * 1024 // 32 mb
