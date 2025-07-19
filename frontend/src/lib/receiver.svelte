@@ -16,21 +16,21 @@
     socket: WebSocket;
   }
 
-  // function b64FileLink(b64string: Base64URLString) {
-  //   // split data into [data:mimetype;, b64data]
-  //   const [header, fileData] = b64string.split('base64,');
-  //   const mimeType = header.slice(5, -1);
-  //   const fileBytes = atob(fileData);
-  //   const byteArray = new Uint8Array(fileBytes.length);
+  function b64FileLink(b64string: Base64URLString) {
+    // split data into [data:mimetype;, b64data]
+    const [header, fileData] = b64string.split('base64,');
+    const mimeType = header.slice(5, -1);
+    const fileBytes = atob(fileData);
+    const byteArray = new Uint8Array(fileBytes.length);
 
-  //   for (let i = 0; i < fileBytes.length; i++) {
-  //     byteArray[i] = fileBytes.charCodeAt(i);
-  //   }
+    for (let i = 0; i < fileBytes.length; i++) {
+      byteArray[i] = fileBytes.charCodeAt(i);
+    }
 
-  //   const fileBlob = new Blob([byteArray], { type: mimeType });
+    const fileBlob = new Blob([byteArray], { type: mimeType });
 
-  //   return URL.createObjectURL(fileBlob);
-  // }
+    return URL.createObjectURL(fileBlob);
+  }
 
   const { socket }: Props = $props();
   let userId: string | null = $state(null);
@@ -76,8 +76,8 @@
       // Process files by converting them into download links on reception so we only do this once
       const processedFiles = itemPayload.data.map(({ filename, b64data }) => ({
         filename,
-        // downloadLink: b64FileLink(b64data),
-        downloadLink: b64data,
+        downloadLink: b64FileLink(b64data),
+        // downloadLink: b64data,
       }));
       processedItem = { ...itemPayload, data: processedFiles };
     }
