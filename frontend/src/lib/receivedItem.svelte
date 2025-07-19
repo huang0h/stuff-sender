@@ -43,7 +43,7 @@
       <ul>
         {#each item.data as file, i (i)}
           <li>
-            <a href={file.downloadLink} download={file.filename}
+            <a href={file.downloadLink} download={file.filename} target="_blank"
               ><button class="action download"
                 ><img src={Download} alt="Download file" width="15" /></button
               ></a
