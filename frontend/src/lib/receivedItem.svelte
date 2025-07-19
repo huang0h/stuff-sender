@@ -64,6 +64,7 @@
 
   .item > h4 {
     margin-bottom: 0px;
+    word-wrap: break-word;
   }
 
   button.action {

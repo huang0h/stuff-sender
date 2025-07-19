@@ -189,6 +189,12 @@
     resize: none;
   }
 
+  @media (max-width: 400px) {
+    #item-text-value {
+      height: 80px;
+    }
+  }
+
   #item-file-value {
     color: transparent; /* hack to hide the native file input text */
   }

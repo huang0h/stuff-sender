@@ -95,6 +95,10 @@
   }
 </script>
 
+<svelte:head>
+  <title>patented stuff sender</title>
+</svelte:head>
+
 <main>
   {#if connectionStatus === ConnectionStatus.DISCONNECTED || userId === null || socket === null}
     <div class="id-form">
