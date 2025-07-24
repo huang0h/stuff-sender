@@ -1,8 +1,10 @@
 <script lang="ts">
   import { ItemType } from '../../../types/types';
-  import type { ProcessedItem } from '../shared.svelte';
+  import type { ProcessedFile, ProcessedItem } from '../shared.svelte';
   import Copy from '$lib/assets/copy.png';
   import Download from '$lib/assets/download.png';
+  import { onMount } from 'svelte';
+  import { b64ToByteArray } from './filefunctions';
 
   interface Props {
     item: ProcessedItem;
@@ -10,6 +12,27 @@
 
   let { item }: Props = $props();
   let open = $state(false);
+  let isMobile = $state(false);
+
+  onMount(() => {
+    isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+  });
+
+  // Use the Web Share API if on mobile and supported, otherwise just download the file
+  function downloadAction(item: ProcessedFile) {
+    return (event: MouseEvent) => {
+      if (navigator.canShare() && isMobile) {
+        event.preventDefault();
+        const [byteArray, mimeType] = b64ToByteArray(item.rawData);
+        navigator.share({
+          files: [new File([byteArray], item.filename, { type: mimeType })],
+          title: item.filename,
+        });
+      }
+    };
+  }
 </script>
 
 <div class="item">
@@ -43,7 +66,7 @@
       <ul>
         {#each item.data as file, i (i)}
           <li>
-            <a href={file.downloadLink} download={file.filename} target="_blank"
+            <a href={file.downloadLink} download={file.filename} onclick={downloadAction(file)}
               ><button class="action download"
                 ><img src={Download} alt="Download file" width="15" /></button
               ></a

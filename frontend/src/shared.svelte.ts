@@ -8,7 +8,7 @@ interface ProcessedItemFields<T extends ItemType, V> {
   data: V;
 }
 
-type ProcessedFile = { filename: string; downloadLink: string };
+export type ProcessedFile = { filename: string; downloadLink: string; rawData: Base64URLString };
 type ProcessedTextItem = ProcessedItemFields<ItemType.TEXT, string>;
 type ProcessedFileItem = ProcessedItemFields<ItemType.FILE, ProcessedFile[]>;
 

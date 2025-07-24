@@ -11,25 +11,10 @@
   import { LOCAL_USER_KEY, type ProcessedItem } from '../shared.svelte';
   import ReceivedItem from './receivedItem.svelte';
   import MinimizeButton from './minimizeButton.svelte';
+  import { b64FileLink } from './filefunctions';
 
   interface Props {
     socket: WebSocket;
-  }
-
-  function b64FileLink(b64string: Base64URLString) {
-    // split data into [data:mimetype;, b64data]
-    const [header, fileData] = b64string.split('base64,');
-    const mimeType = header.slice(5, -1);
-    const fileBytes = atob(fileData);
-    const byteArray = new Uint8Array(fileBytes.length);
-
-    for (let i = 0; i < fileBytes.length; i++) {
-      byteArray[i] = fileBytes.charCodeAt(i);
-    }
-
-    const fileBlob = new Blob([byteArray], { type: mimeType });
-
-    return URL.createObjectURL(fileBlob);
   }
 
   const { socket }: Props = $props();
@@ -77,7 +62,7 @@
       const processedFiles = itemPayload.data.map(({ filename, b64data }) => ({
         filename,
         downloadLink: b64FileLink(b64data),
-        // downloadLink: b64data,
+        rawData: b64data,
       }));
       processedItem = { ...itemPayload, data: processedFiles };
     }
