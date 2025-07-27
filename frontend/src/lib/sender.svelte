@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { ItemType, MAX_FILE_SIZE_BYTES, MessageTypes } from '../../../types/types';
   import MinimizeButton from './minimizeButton.svelte';
+  import { bytesToMB } from './filefunctions';
+  import type { ChangeEventHandler, DragEventHandler } from 'svelte/elements';
 
   interface Props {
     socket: WebSocket;
@@ -14,11 +17,14 @@
   let isOpen = $state(true);
 
   let itemTextValue = $state('');
-  let itemFileValue: FileList | null = $state(null);
+  let itemFileValue: File[] = $state([]);
 
-  function bytesToMB(bytes: number, places: number = 2) {
-    return (bytes / 1024 / 1024).toFixed(places);
-  }
+  const onFileUpload: ChangeEventHandler<HTMLInputElement> = (event) => {
+    const uploadedFiles = (event.target as HTMLInputElement).files;
+    if (uploadedFiles === null) return;
+
+    itemFileValue = Array.from(uploadedFiles);
+  };
 
   function itemFileToB64(file: File) {
     return new Promise<[string, string]>((resolve, reject) => {
@@ -33,7 +39,7 @@
     let data;
     if (itemType === ItemType.TEXT) {
       data = itemTextValue;
-    } else if (itemType === ItemType.FILE && itemFileValue !== null) {
+    } else if (itemType === ItemType.FILE && itemFileValue.length > 0) {
       let totalFileBytes = 0;
       for (let file of itemFileValue) {
         totalFileBytes += file.size;
@@ -46,7 +52,7 @@
         return;
       }
 
-      const b64Files = await Promise.all(Array.from(itemFileValue).map((f) => itemFileToB64(f)));
+      const b64Files = await Promise.all(itemFileValue.map((f) => itemFileToB64(f)));
       data = b64Files.map(([filename, b64data]) => ({ filename, b64data }));
     } else {
       data = '';
@@ -73,7 +79,56 @@
     // Reset fields
     itemName = '';
     itemTextValue = '';
-    itemFileValue = null;
+    itemFileValue = [];
+  }
+
+  async function pasteFiles() {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      if (clipboardItems.length === 0) return;
+
+      // Check if clipboard just has plain text: if so, switch to text input and paste there
+      if (clipboardItems[0].types.includes('text/plain')) {
+        itemType = ItemType.TEXT;
+        itemTextValue = await navigator.clipboard.readText();
+        return;
+      }
+
+      const timestamp = Date.now();
+      const blobs = await Promise.all(clipboardItems.map((item) => { console.log(item.types); return item.getType(item.types[0])}));
+      itemFileValue = blobs.map((b, i) => {
+        let extension = (b.type.split('/').at(-1) as string).toLowerCase();
+
+        if (extension === 'svg+xml') {
+          // special case since svg is weird
+          extension = '.svg';
+        } else if (!/^[a-z]+$/.test(extension)) {
+          // ensure "extension" is alphabetic
+          extension = '';
+        } else {
+          extension = '.' + extension;
+        }
+
+        return new File([b], `${timestamp}-${i}${extension}`, { type: b.type });
+      });
+      console.log(itemFileValue);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        alert('Reading from clipboard was not allowed - try changing your browser settings?');
+        return;
+      }
+    }
+  }
+
+  const onDrop: DragEventHandler<HTMLSpanElement> = (event) => {
+    event.preventDefault();
+    const files = event.dataTransfer?.files;
+    
+    if (files === undefined) {
+      return;
+    } else {
+      itemFileValue = Array.from(files);
+    }
   }
 </script>
 
@@ -118,8 +173,11 @@
         {:else if itemType === ItemType.FILE}
           <label for="item-fileItemType">File:</label>
           <br />
-          <input id="item-file-value" type="file" multiple bind:files={itemFileValue} />
-          {#if itemFileValue !== null}
+          <span class='file-dropzone' role='region' ondragover={(event) => event.preventDefault()} ondrop={onDrop}
+            ><input id="item-file-value" type="file" multiple onchange={onFileUpload} /> or
+            <button onclick={pasteFiles}>Paste</button></span
+          >
+          {#if itemFileValue.length > 0}
             <br />
             <ul class="file-list">
               {#each itemFileValue as file, i (i)}
@@ -196,7 +254,12 @@
   }
 
   #item-file-value {
-    color: transparent; /* hack to hide the native file input text */
+    font-size: 0;
+  }
+
+  #item-file-value::file-selector-button {
+    font-size: 0.8rem;
+    margin-right: 0px;
   }
 
   ul.file-list {

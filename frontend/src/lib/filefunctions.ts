@@ -20,3 +20,7 @@ export function b64FileLink(b64string: Base64URLString) {
 
   return URL.createObjectURL(fileBlob);
 }
+
+export function bytesToMB(bytes: number, places: number = 2) {
+  return (bytes / 1024 / 1024).toFixed(places);
+}
