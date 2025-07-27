@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { ItemType, MAX_FILE_SIZE_BYTES, MessageTypes } from '../../../types/types';
   import MinimizeButton from './minimizeButton.svelte';
   import { bytesToMB } from './filefunctions';
@@ -95,7 +94,7 @@
       }
 
       const timestamp = Date.now();
-      const blobs = await Promise.all(clipboardItems.map((item) => { console.log(item.types); return item.getType(item.types[0])}));
+      const blobs = await Promise.all(clipboardItems.map((item) => item.getType(item.types[0])));
       itemFileValue = blobs.map((b, i) => {
         let extension = (b.type.split('/').at(-1) as string).toLowerCase();
 
@@ -123,13 +122,13 @@
   const onDrop: DragEventHandler<HTMLSpanElement> = (event) => {
     event.preventDefault();
     const files = event.dataTransfer?.files;
-    
+
     if (files === undefined) {
       return;
     } else {
       itemFileValue = Array.from(files);
     }
-  }
+  };
 </script>
 
 <div id="send-form" class={isOpen ? 'open' : 'closed'}>
@@ -173,7 +172,11 @@
         {:else if itemType === ItemType.FILE}
           <label for="item-fileItemType">File:</label>
           <br />
-          <span class='file-dropzone' role='region' ondragover={(event) => event.preventDefault()} ondrop={onDrop}
+          <span
+            class="file-dropzone"
+            role="region"
+            ondragover={(event) => event.preventDefault()}
+            ondrop={onDrop}
             ><input id="item-file-value" type="file" multiple onchange={onFileUpload} /> or
             <button onclick={pasteFiles}>Paste</button></span
           >
