@@ -99,44 +99,49 @@
   <title>patented stuff sender</title>
 </svelte:head>
 
-<main>
-  {#if connectionStatus === ConnectionStatus.DISCONNECTED || userId === null || socket === null}
-    <div class="id-form">
-      Connect with a unique user ID:
-      <br /><br />
-      <input bind:value={idInput} />
-      <button onclick={updateUserId}>Submit</button>
-    </div>
-  {:else if connectionStatus === ConnectionStatus.CONNECTING}
-    connecting...
-  {:else if connectionStatus === ConnectionStatus.CONNECTED}
-    <section>
-      <div class="status">
-        <p>
-          Connected to {connectionCount} other device{connectionCount === 1 ? '' : 's'}
-        </p>
-        <br />
-        <button onclick={clearUser}>Disconnect</button>
+<div class="container">
+  <main>
+    {#if connectionStatus === ConnectionStatus.DISCONNECTED || userId === null || socket === null}
+      <div class="id-form">
+        Connect with a unique user ID:
+        <br /><br />
+        <input bind:value={idInput} />
+        <button onclick={updateUserId}>Submit</button>
       </div>
-      {#if connectionCount <= 1}
-        <div class="warning">
-          No other connections detected :(
+    {:else if connectionStatus === ConnectionStatus.CONNECTING}
+      connecting...
+    {:else if connectionStatus === ConnectionStatus.CONNECTED}
+      <section>
+        <div class="status">
+          <p>
+            Connected to {connectionCount} other device{connectionCount === 1 ? '' : 's'}
+          </p>
           <br />
-          Connect with the same user ID on another device to send content!
-          <br />
+          <button onclick={clearUser}>Disconnect</button>
         </div>
-      {:else}
-        <Sender {socket} {userId} />
-        <Receiver {socket} />
-        <Cache />
-      {/if}
-    </section>
-  {:else}
-    <div class="warning">
-      Looks like something went wrong with setting up a connection - try refreshing the page?
-    </div>
-  {/if}
-</main>
+        {#if connectionCount <= 1}
+          <div class="warning">
+            No other connections detected :(
+            <br />
+            Connect with the same user ID on another device to send content!
+            <br />
+          </div>
+        {:else}
+          <Sender {socket} {userId} />
+          <Receiver {socket} />
+          <Cache />
+        {/if}
+      </section>
+    {:else}
+      <div class="warning">
+        Looks like something went wrong with setting up a connection - try refreshing the page?
+      </div>
+    {/if}
+  </main>
+  <footer>
+    made with &lt;3 by <a href="https://github.com/huang0h" target="_blank">avery huang</a>
+  </footer>
+</div>
 
 <style>
   :global(*) {
@@ -153,13 +158,15 @@
     text-align: center;
 
     overflow: scroll;
+
+    height: 95vh;
   }
 
-  @media (orientation: portrait) {
-    :global(body) {
-      margin-top: 20px;
-      margin-bottom: 50px;
-    }
+  .container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    justify-content: flex-start;
   }
 
   main {
@@ -169,6 +176,8 @@
     align-items: center;
 
     padding-top: 20px;
+
+    flex: 1;
   }
 
   .warning {
@@ -189,14 +198,6 @@
     gap: 40px;
   }
 
-  @media (orientation: portrait) {
-    section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-  }
-
   .status {
     padding: 20px 40px;
     width: 200px;
@@ -205,5 +206,26 @@
     border: 2px solid blue;
     border-radius: 5px;
     box-shadow: 0 0 15px blue;
+  }
+
+  footer {
+    font-size: 0.8rem;
+  }
+
+  @media (orientation: portrait) {
+    section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    :global(body) {
+      margin-top: 20px;
+      margin-bottom: 50px;
+    }
+
+    footer {
+      margin: 30px 0;
+    }
   }
 </style>
